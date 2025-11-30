@@ -69,18 +69,19 @@
     }
 
     button {
-        margin-top: 25px;
+        margin-top: 15px;
         background: linear-gradient(90deg, #ff6a00, #ff3c00);
         color: white;
         border: none;
-        font-size: 22px;
-        padding: 14px 30px;
+        font-size: 20px;
+        padding: 12px 28px;
         border-radius: 14px;
         cursor: pointer;
         font-weight: bold;
         transition: 0.25s;
         box-shadow: 0 0 18px #ff6a00cc, inset 0 0 10px #000;
         border: 2px solid #ffae00;
+        margin-right: 10px;
     }
 
     button:hover {
@@ -106,7 +107,6 @@
         text-shadow: 0 0 10px white;
         min-height: 28px;
     }
-
 </style>
 </head>
 
@@ -121,8 +121,8 @@
     </div>
 
     <button id="btnGirar">Girar Roleta</button>
+    <button id="btnReset">Resetar Giros</button>
 
-    <!-- TEXTO MOSTRANDO LIMITE -->
     <div id="limite">⠀</div>
     <div id="resultado">⠀</div>
 </div>
@@ -131,7 +131,6 @@
 <audio id="win" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_fce346c94b.mp3?filename=success-1-6297.mp3" preload="auto"></audio>
 
 <script>
-// ===== LIMITAÇÃO DOS 3 GIROS COM PERSISTÊNCIA =====
 const maxGiros = 3;
 let giros = parseInt(localStorage.getItem("giros")) || 0;
 
@@ -140,6 +139,7 @@ const ctx = canvas.getContext("2d");
 const tickSound = document.getElementById("tick");
 const winSound = document.getElementById("win");
 const btn = document.getElementById("btnGirar");
+const btnReset = document.getElementById("btnReset");
 const resultadoDiv = document.getElementById("resultado");
 const limiteDiv = document.getElementById("limite");
 
@@ -147,128 +147,4 @@ const racas = [
     { nome: "Humano",  chance: 40, cor: "#e6d6a3" },
     { nome: "Elfo",    chance: 25, cor: "#00ff44" },
     { nome: "Anão",    chance: 20, cor: "#8b4513" },
-    { nome: "Bruxa",   chance: 10, cor: "#7a00ff" },
-    { nome: "Demônio", chance: 5,  cor: "#ff3300" }
-];
-
-let setores = [];
-let angulo = 0;
-let animando = false;
-let ultimoIndiceTick = -1;
-
-// Atualizar interface inicial
-if (giros >= maxGiros) {
-    limiteDiv.textContent = "Seus giros acabaram!";
-    btn.disabled = true;
-    btn.style.opacity = "0.4";
-    btn.style.cursor = "not-allowed";
-} else {
-    limiteDiv.textContent = `Giros restantes: ${maxGiros - giros}`;
-}
-
-// ===== FUNÇÕES DA ROTAÇÃO =====
-function calcularSetores(){
-    const total = racas.reduce((s,r)=> s + r.chance, 0);
-    let acc = 0;
-    setores = racas.map(r => {
-        const inicio = (acc / total) * Math.PI * 2;
-        acc += r.chance;
-        const fim = (acc / total) * Math.PI * 2;
-        return { nome: r.nome, cor: r.cor, inicio, fim };
-    });
-}
-
-function desenhar(){
-    const w = canvas.width, h = canvas.height;
-    const cx = w/2, cy = h/2, radius = Math.min(w,h)/2 - 10;
-    ctx.clearRect(0,0,w,h);
-
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(angulo);
-
-    setores.forEach(s => {
-        ctx.beginPath();
-        ctx.fillStyle = s.cor;
-        ctx.moveTo(0,0);
-        ctx.arc(0,0,radius, s.inicio, s.fim);
-        ctx.fill();
-
-        ctx.save();
-        ctx.fillStyle = "#fff";
-        ctx.rotate((s.inicio + s.fim)/2);
-        ctx.textAlign = "center";
-        ctx.font = "16px Arial";
-        ctx.fillText(s.nome, radius * 0.60, 6);
-        ctx.restore();
-    });
-
-    ctx.beginPath();
-    ctx.fillStyle = "#111";
-    ctx.arc(0,0, radius * 0.22, 0, Math.PI*2);
-    ctx.fill();
-
-    ctx.restore();
-}
-
-function pegarSetorAtual(){
-    const anguloPonteiro = 3 * Math.PI / 2;
-    let ang = (anguloPonteiro - angulo) % (2*Math.PI);
-    if(ang < 0) ang += 2*Math.PI;
-    return setores.findIndex(s => ang >= s.inicio && ang < s.fim);
-}
-
-function girar(){
-    if(animando) return;
-    if (giros >= maxGiros) return;
-
-    giros++;
-    localStorage.setItem("giros", giros);
-    limiteDiv.textContent = `Giros restantes: ${maxGiros - giros}`;
-
-    animando = true;
-    btn.classList.add("girando");
-
-    let velocidade = 0.4;
-    let desaceleracao = 0.002;
-
-    function animar(){
-        angulo += velocidade;
-        desenhar();
-
-        const indice = pegarSetorAtual();
-        if(indice !== ultimoIndiceTick){
-            tickSound.currentTime = 0;
-            tickSound.play();
-            ultimoIndiceTick = indice;
-        }
-
-        velocidade -= desaceleracao;
-        if(velocidade > 0){
-            requestAnimationFrame(animar);
-        } else {
-            animando = false;
-            btn.classList.remove("girando");
-
-            const final = pegarSetorAtual();
-            resultadoDiv.textContent = setores[final].nome;
-
-            winSound.play();
-
-            if (giros >= maxGiros) {
-                btn.disabled = true;
-                btn.style.opacity = "0.4";
-                btn.style.cursor = "not-allowed";
-                limiteDiv.textContent = "Seus giros acabaram!";
-            }
-        }
-    }
-    animar();
-}
-
-btn.onclick = girar;
-calcularSetores();
-desenhar();
-</script>
-</body>
-</html>
+    { nome: "Bruxa",   chance: 10,
