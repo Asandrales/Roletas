@@ -123,7 +123,7 @@
     <button id="btnGirar">Girar Roleta</button>
 
     <!-- TEXTO MOSTRANDO LIMITE -->
-    <div id="limite">⠀</div>
+    <div id="limite">Você tem 3 giros!</div>
     <div id="resultado">⠀</div>
 </div>
 
@@ -131,17 +131,10 @@
 <audio id="win" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_fce346c94b.mp3?filename=success-1-6297.mp3" preload="auto"></audio>
 
 <script>
-// ===== LIMITAÇÃO DOS 3 GIROS COM PERSISTÊNCIA =====
+// ===== LIMITAÇÃO DOS 3 GIROS =====
+let giros = 0;
 const maxGiros = 3;
-let giros = parseInt(localStorage.getItem("giros")) || 0;
-
-const canvas = document.getElementById("wheel");
-const ctx = canvas.getContext("2d");
-const tickSound = document.getElementById("tick");
-const winSound = document.getElementById("win");
-const btn = document.getElementById("btnGirar");
-const resultadoDiv = document.getElementById("resultado");
-const limiteDiv = document.getElementById("limite");
+// =================================
 
 const racas = [
     { nome: "Humano",  chance: 40, cor: "#e6d6a3" },
@@ -151,22 +144,19 @@ const racas = [
     { nome: "Demônio", chance: 5,  cor: "#ff3300" }
 ];
 
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const tickSound = document.getElementById("tick");
+const winSound = document.getElementById("win");
+const btn = document.getElementById("btnGirar");
+const resultadoDiv = document.getElementById("resultado");
+const limiteDiv = document.getElementById("limite");
+
 let setores = [];
 let angulo = 0;
 let animando = false;
 let ultimoIndiceTick = -1;
 
-// Atualizar interface inicial
-if (giros >= maxGiros) {
-    limiteDiv.textContent = "Seus giros acabaram!";
-    btn.disabled = true;
-    btn.style.opacity = "0.4";
-    btn.style.cursor = "not-allowed";
-} else {
-    limiteDiv.textContent = `Giros restantes: ${maxGiros - giros}`;
-}
-
-// ===== FUNÇÕES DA ROTAÇÃO =====
 function calcularSetores(){
     const total = racas.reduce((s,r)=> s + r.chance, 0);
     let acc = 0;
@@ -220,15 +210,19 @@ function pegarSetorAtual(){
 
 function girar(){
     if(animando) return;
-    if (giros >= maxGiros) return;
+
+    if (giros >= maxGiros) {
+        resultadoDiv.textContent = "Seus giros acabaram!";
+        return;
+    }
 
     giros++;
-    localStorage.setItem("giros", giros);
     limiteDiv.textContent = `Giros restantes: ${maxGiros - giros}`;
 
     animando = true;
     btn.classList.add("girando");
 
+    const alvo = Math.random() * Math.PI * 2;
     let velocidade = 0.4;
     let desaceleracao = 0.002;
 
@@ -251,7 +245,7 @@ function girar(){
             btn.classList.remove("girando");
 
             const final = pegarSetorAtual();
-            resultadoDiv.textContent = setores[final].nome;
+            resultadoDiv.textContent = "Resultado: " + setores[final].nome;
 
             winSound.play();
 
@@ -272,4 +266,3 @@ desenhar();
 </script>
 </body>
 </html>
-
