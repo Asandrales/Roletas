@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Roleta de Cargos</title>
+<title>Roleta de Raças</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
     body {
@@ -99,63 +99,41 @@
         to   { transform: scale(1.08); box-shadow: 0 0 30px #ffaa00; }
     }
 
-    #resultado {
-        margin-top: 28px;
-        font-size: 26px;
+    #resultado, #limite {
+        margin-top: 18px;
+        font-size: 22px;
         font-weight: bold;
         text-shadow: 0 0 10px white;
         min-height: 28px;
-        white-space: pre-line;
     }
 
-    #avisoFim {
-        margin-top: 12px;
-        font-size: 22px;
-        font-weight: bold;
-        color: #fff;
-        text-shadow: 0 0 15px #ffae00;
-        min-height: 28px;
-    }
-
-    #girosRestantes {
-        font-size: 20px;
-        margin-top: 15px;
-        color: #ffd37a;
-        text-shadow: 0 0 8px #ffae00;
-        min-height: 28px;
-    }
 </style>
 </head>
 
 <body>
 
-<h1>🎡 Roleta de Cargos</h1>
+<h1>🎡 Roleta de Raças</h1>
 
 <div class="container">
-
     <div class="wheel-box">
         <canvas id="wheel" width="300" height="300"></canvas>
         <div class="ponteiro"></div>
     </div>
 
     <button id="btnGirar">Girar Roleta</button>
-    <div id="girosRestantes">Giros restantes: <b>3</b></div>
+
+    <!-- TEXTO MOSTRANDO LIMITE -->
+    <div id="limite">⠀</div>
     <div id="resultado">⠀</div>
-    <div id="avisoFim"></div>
 </div>
 
 <audio id="tick" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_f5075c2042.mp3?filename=tick-85736.mp3" preload="auto"></audio>
 <audio id="win" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_fce346c94b.mp3?filename=success-1-6297.mp3" preload="auto"></audio>
 
 <script>
-const racas = [
-    { nome: "Pebleu",       chance: 45,  cor: "#a3d322" },
-    { nome: "Aldeão",       chance: 35,  cor: "#00ff44" },
-    { nome: "Nobre",        chance: 15,  cor: "#00d4ff" },
-    { nome: "Realeza",      chance: 5,   cor: "#ff2b2b" },
-    { nome: "Zogratis",     chance: 1,   cor: "#7bd3ff" },
-    { nome: "Grinberryall", chance: 0.5, cor: "#ffcc00" }
-];
+// ===== LIMITAÇÃO DOS 3 GIROS COM PERSISTÊNCIA =====
+const maxGiros = 3;
+let giros = parseInt(localStorage.getItem("giros")) || 0;
 
 const canvas = document.getElementById("wheel");
 const ctx = canvas.getContext("2d");
@@ -163,48 +141,40 @@ const tickSound = document.getElementById("tick");
 const winSound = document.getElementById("win");
 const btn = document.getElementById("btnGirar");
 const resultadoDiv = document.getElementById("resultado");
-const avisoFimDiv = document.getElementById("avisoFim");
-const girosRestantesDiv = document.getElementById("girosRestantes");
+const limiteDiv = document.getElementById("limite");
+
+const racas = [
+    { nome: "Humano",  chance: 40, cor: "#e6d6a3" },
+    { nome: "Elfo",    chance: 25, cor: "#00ff44" },
+    { nome: "Anão",    chance: 20, cor: "#8b4513" },
+    { nome: "Bruxa",   chance: 10, cor: "#7a00ff" },
+    { nome: "Demônio", chance: 5,  cor: "#ff3300" }
+];
 
 let setores = [];
 let angulo = 0;
 let animando = false;
 let ultimoIndiceTick = -1;
 
-let giros = 0;
-const maxGiros = 3;
+// Atualizar interface inicial
+if (giros >= maxGiros) {
+    limiteDiv.textContent = "Seus giros acabaram!";
+    btn.disabled = true;
+    btn.style.opacity = "0.4";
+    btn.style.cursor = "not-allowed";
+} else {
+    limiteDiv.textContent = `Giros restantes: ${maxGiros - giros}`;
+}
 
+// ===== FUNÇÕES DA ROTAÇÃO =====
 function calcularSetores(){
-    const tamanhoMinimo = 5; // 5% mínimo visual
-    const totalChanceReal = racas.reduce((s, r) => s + r.chance, 0);
-
-    let temp = racas.map(r => {
-        let chanceVisual = (r.chance / totalChanceReal) * 100;
-        if(chanceVisual < tamanhoMinimo) chanceVisual = tamanhoMinimo;
-
-        return {
-            nome: r.nome,
-            cor: r.cor,
-            chanceVisual
-        };
-    });
-
-    const totalVisual = temp.reduce((s, r) => s + r.chanceVisual, 0);
-
-    setores = [];
+    const total = racas.reduce((s,r)=> s + r.chance, 0);
     let acc = 0;
-
-    temp.forEach(r => {
-        const inicio = (acc / totalVisual) * Math.PI * 2;
-        acc += r.chanceVisual;
-        const fim = (acc / totalVisual) * Math.PI * 2;
-
-        setores.push({
-            nome: r.nome,
-            cor: r.cor,
-            inicio,
-            fim
-        });
+    setores = racas.map(r => {
+        const inicio = (acc / total) * Math.PI * 2;
+        acc += r.chance;
+        const fim = (acc / total) * Math.PI * 2;
+        return { nome: r.nome, cor: r.cor, inicio, fim };
     });
 }
 
@@ -250,16 +220,11 @@ function pegarSetorAtual(){
 
 function girar(){
     if(animando) return;
-
-    if(giros >= maxGiros){
-        avisoFimDiv.textContent = "Você usou todos os giros!";
-        return;
-    }
-
-    avisoFimDiv.textContent = ""; // limpa aviso antes de girar
+    if (giros >= maxGiros) return;
 
     giros++;
-    girosRestantesDiv.innerHTML = `Giros restantes: <b>${maxGiros - giros}</b>`;
+    localStorage.setItem("giros", giros);
+    limiteDiv.textContent = `Giros restantes: ${maxGiros - giros}`;
 
     animando = true;
     btn.classList.add("girando");
@@ -286,15 +251,15 @@ function girar(){
             btn.classList.remove("girando");
 
             const final = pegarSetorAtual();
-            resultadoDiv.textContent = "Resultado: " + setores[final].nome;
+            resultadoDiv.textContent = setores[final].nome;
 
             winSound.play();
 
-            if(giros >= maxGiros){
+            if (giros >= maxGiros) {
                 btn.disabled = true;
                 btn.style.opacity = "0.4";
                 btn.style.cursor = "not-allowed";
-                avisoFimDiv.textContent = "Você usou todos os giros!";
+                limiteDiv.textContent = "Seus giros acabaram!";
             }
         }
     }
@@ -302,10 +267,8 @@ function girar(){
 }
 
 btn.onclick = girar;
-
 calcularSetores();
 desenhar();
-
 </script>
 </body>
 </html>
